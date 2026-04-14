@@ -1,65 +1,220 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import PlayerSearch from "@/components/PlayerSearch";
+import FilterPanel from "@/components/FilterPanel";
+import type { SearchResult, RandomFilters } from "@/lib/types";
 
 export default function Home() {
+  const router = useRouter();
+  const [mode, setMode] = useState<"manual" | "random" | null>(null);
+  const [startPlayer, setStartPlayer] = useState<SearchResult | null>(null);
+  const [finishPlayer, setFinishPlayer] = useState<SearchResult | null>(null);
+  const [filters, setFilters] = useState<RandomFilters>({
+    modernEra: false,
+    minSeasons: false,
+    minGames: false,
+    allStar: false,
+    firstRound: false,
+  });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const startManualGame = () => {
+    if (!startPlayer || !finishPlayer) return;
+    router.push(`/play?start=${startPlayer.id}&finish=${finishPlayer.id}`);
+  };
+
+  const startRandomGame = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const params = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value) params.set(key, "true");
+      });
+
+      const res = await fetch(`/api/random?${params.toString()}`);
+      if (!res.ok) {
+        const data = await res.json();
+        setError(data.error || "Failed to generate random players");
+        return;
+      }
+
+      const data = await res.json();
+      router.push(
+        `/play?start=${data.startPlayer.id}&finish=${data.finishPlayer.id}`
+      );
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
+      <div className="max-w-md w-full space-y-8">
+        {/* Logo / Title */}
+        <div className="text-center space-y-2">
+          <h1 className="text-4xl font-bold tracking-tight">
+            <span className="text-accent">Ball</span>{" "}
+            <span className="text-foreground">Links</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="text-muted text-sm">
+            Connect two NBA players through common teammates
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
+
+        {/* Mode Selection */}
+        {mode === null && (
+          <div className="space-y-3">
+            <button
+              onClick={() => setMode("manual")}
+              className="w-full py-4 px-6 bg-card-bg border border-card-border rounded-xl text-foreground font-medium hover:border-accent transition-colors group"
+            >
+              <div className="text-lg">Choose Players</div>
+              <div className="text-sm text-muted group-hover:text-muted">
+                Pick your own Start and Finish
+              </div>
+            </button>
+            <button
+              onClick={() => setMode("random")}
+              className="w-full py-4 px-6 bg-card-bg border border-card-border rounded-xl text-foreground font-medium hover:border-accent transition-colors group"
+            >
+              <div className="text-lg">Random Players</div>
+              <div className="text-sm text-muted group-hover:text-muted">
+                Generate a random challenge
+              </div>
+            </button>
+          </div>
+        )}
+
+        {/* Manual Mode */}
+        {mode === "manual" && (
+          <div className="space-y-4">
+            <button
+              onClick={() => {
+                setMode(null);
+                setStartPlayer(null);
+                setFinishPlayer(null);
+              }}
+              className="text-sm text-muted hover:text-foreground transition-colors"
+            >
+              &larr; Back
+            </button>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs uppercase tracking-wider text-muted font-semibold mb-1 block">
+                  Start Player
+                </label>
+                {startPlayer ? (
+                  <div className="flex items-center justify-between px-4 py-3 bg-card-bg border border-success/50 rounded-lg">
+                    <span className="font-medium text-foreground">
+                      {startPlayer.name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted">
+                        ({startPlayer.startYear}&ndash;{startPlayer.endYear})
+                      </span>
+                      <button
+                        onClick={() => setStartPlayer(null)}
+                        className="text-muted hover:text-error transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <PlayerSearch
+                    onSelect={setStartPlayer}
+                    placeholder="Search start player..."
+                    autoFocus
+                  />
+                )}
+              </div>
+
+              <div>
+                <label className="text-xs uppercase tracking-wider text-muted font-semibold mb-1 block">
+                  Finish Player
+                </label>
+                {finishPlayer ? (
+                  <div className="flex items-center justify-between px-4 py-3 bg-card-bg border border-success/50 rounded-lg">
+                    <span className="font-medium text-foreground">
+                      {finishPlayer.name}
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-muted">
+                        ({finishPlayer.startYear}&ndash;{finishPlayer.endYear})
+                      </span>
+                      <button
+                        onClick={() => setFinishPlayer(null)}
+                        className="text-muted hover:text-error transition-colors"
+                      >
+                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <PlayerSearch
+                    onSelect={setFinishPlayer}
+                    placeholder="Search finish player..."
+                  />
+                )}
+              </div>
+            </div>
+
+            <button
+              onClick={startManualGame}
+              disabled={!startPlayer || !finishPlayer}
+              className="w-full py-3 bg-accent text-white rounded-lg font-bold text-lg hover:bg-accent-hover transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Start Game
+            </button>
+          </div>
+        )}
+
+        {/* Random Mode */}
+        {mode === "random" && (
+          <div className="space-y-4">
+            <button
+              onClick={() => setMode(null)}
+              className="text-sm text-muted hover:text-foreground transition-colors"
+            >
+              &larr; Back
+            </button>
+
+            <FilterPanel filters={filters} onChange={setFilters} />
+
+            {error && (
+              <div className="px-4 py-3 bg-error/10 border border-error/30 rounded-lg text-error text-sm">
+                {error}
+              </div>
+            )}
+
+            <button
+              onClick={startRandomGame}
+              disabled={isLoading}
+              className="w-full py-3 bg-accent text-white rounded-lg font-bold text-lg hover:bg-accent-hover transition-colors disabled:opacity-60"
+            >
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Generating...
+                </span>
+              ) : (
+                "Generate Challenge"
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+    </main>
   );
 }
