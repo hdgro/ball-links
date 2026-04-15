@@ -25,7 +25,7 @@ const HEADERS = {
 };
 
 const START_SEASON = 1980;
-const END_SEASON = 2025;
+const END_SEASON = 2026;
 const DELAY_MS = 3500;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
