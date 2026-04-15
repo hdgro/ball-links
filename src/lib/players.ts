@@ -9,6 +9,9 @@ interface PlayerData {
       startYear: number;
       endYear: number;
       nbaComId?: number;
+      allStar?: boolean;
+      firstRound?: boolean;
+      careerGames?: number;
     }
   >;
   rosters: Record<string, string[]>;
@@ -33,6 +36,9 @@ function getPlayerList(data: PlayerData): Player[] {
     startYear: p.startYear,
     endYear: p.endYear,
     nbaComId: p.nbaComId,
+    allStar: p.allStar,
+    firstRound: p.firstRound,
+    careerGames: p.careerGames,
   }));
 }
 
@@ -152,10 +158,16 @@ export async function getRandomPlayer(filters: {
     players = players.filter((p) => p.endYear - p.startYear + 1 >= 5);
   }
 
-  // minGames and allStar/firstRound filters would need additional data
-  // For V1, we approximate minGames with minSeasons * ~60
   if (filters.minGames) {
-    players = players.filter((p) => p.endYear - p.startYear + 1 >= 7);
+    players = players.filter((p) => (p.careerGames ?? 0) >= 500);
+  }
+
+  if (filters.allStar) {
+    players = players.filter((p) => p.allStar === true);
+  }
+
+  if (filters.firstRound) {
+    players = players.filter((p) => p.firstRound === true);
   }
 
   if (players.length === 0) return null;

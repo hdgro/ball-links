@@ -4,6 +4,9 @@ export interface Player {
   startYear: number;
   endYear: number;
   nbaComId?: number;
+  allStar?: boolean;
+  firstRound?: boolean;
+  careerGames?: number;
 }
 
 export interface PlayerStint {
