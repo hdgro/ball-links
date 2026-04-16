@@ -182,8 +182,5 @@ export async function getAllPlayers(): Promise<Player[]> {
 }
 
 export function getHeadshotUrl(player: Player): string {
-  if (player.nbaComId) {
-    return `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaComId}.png`;
-  }
-  return "/placeholder.svg";
+  return `https://www.basketball-reference.com/req/202106291/images/players/${player.id}.jpg`;
 }

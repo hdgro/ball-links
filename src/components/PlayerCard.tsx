@@ -18,9 +18,7 @@ export default function PlayerCard({
 }: PlayerCardProps) {
   const [imgError, setImgError] = useState(false);
 
-  const headshotUrl = player.nbaComId
-    ? `https://cdn.nba.com/headshots/nba/latest/1040x760/${player.nbaComId}.png`
-    : "/placeholder.svg";
+  const headshotUrl = `https://www.basketball-reference.com/req/202106291/images/players/${player.id}.jpg`;
 
   if (collapsed && !showExpanded) {
     return (
