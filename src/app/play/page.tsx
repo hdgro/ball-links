@@ -186,9 +186,6 @@ function GameContent() {
         <div className="flex gap-4">
           {/* Main game area */}
           <div className="flex-1 space-y-4">
-            {/* Active player card */}
-            <PlayerCard player={currentPlayer} />
-
             {/* Guess input */}
             <div className="space-y-2">
               <PlayerSearch
@@ -209,6 +206,9 @@ function GameContent() {
                 </div>
               )}
             </div>
+
+            {/* Active player card */}
+            <PlayerCard player={currentPlayer} />
 
             {/* Chain history (collapsed cards) */}
             {chain.length > 1 && (
