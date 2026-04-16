@@ -36,7 +36,7 @@ export default function PlayerCard({
 
   return (
     <div className="bg-card-bg border border-card-border rounded-xl p-4 w-full max-w-xs mx-auto">
-      <div className="aspect-[4/3] relative rounded-lg overflow-hidden bg-background mb-3">
+      <div className="aspect-[3/4] relative rounded-lg overflow-hidden bg-background mb-3">
         {!imgError ? (
           <img
             src={headshotUrl}
