@@ -212,10 +212,7 @@ function GameContent() {
 
             {/* Chain history (collapsed cards) */}
             {chain.length > 1 && (
-              <div className="space-y-2 mt-6">
-                <h3 className="text-xs uppercase tracking-wider text-muted font-semibold">
-                  Your path
-                </h3>
+              <div className="space-y-2">
                 {chain
                   .slice(0, -1)
                   .reverse()
