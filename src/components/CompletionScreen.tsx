@@ -23,7 +23,14 @@ export default function CompletionScreen({
   const [copiedChallenge, setCopiedChallenge] = useState(false);
   const [copiedResults, setCopiedResults] = useState(false);
 
-  const pathLength = chain.length;
+  // The finish player isn't stored in the chain (it doesn't count as a link).
+  // Append it for display so the path reads start → … → finish.
+  const displayChain =
+    chain.length > 0 && chain[chain.length - 1].id === finishPlayer.id
+      ? chain
+      : [...chain, finishPlayer];
+  const pathLength = displayChain.length;
+  const linkCount = Math.max(0, chain.length - 1);
 
   const copyChallenge = async () => {
     const url = `${window.location.origin}/play?start=${startPlayer.id}&finish=${finishPlayer.id}`;
@@ -33,7 +40,7 @@ export default function CompletionScreen({
   };
 
   const copyResults = async () => {
-    const chainIds = chain.map((p) => p.id).join(",");
+    const chainIds = displayChain.map((p) => p.id).join(",");
     const url = `${window.location.origin}/results?start=${startPlayer.id}&finish=${finishPlayer.id}&chain=${chainIds}&guesses=${guessCount}`;
     await navigator.clipboard.writeText(url);
     setCopiedResults(true);
@@ -63,7 +70,7 @@ export default function CompletionScreen({
             <div className="w-px bg-card-border" />
             <div>
               <div className="text-2xl font-bold text-foreground">
-                {pathLength - 1}
+                {linkCount}
               </div>
               <div className="text-xs text-muted uppercase tracking-wider">
                 Links
@@ -85,7 +92,7 @@ export default function CompletionScreen({
           <h3 className="text-xs uppercase tracking-wider text-muted font-semibold mb-3">
             Your Path
           </h3>
-          {chain.map((player, index) => (
+          {displayChain.map((player, index) => (
             <div key={player.id + index} className="flex items-center gap-2">
               {index > 0 && (
                 <div className="w-4 flex justify-center">
@@ -107,7 +114,7 @@ export default function CompletionScreen({
               {index === 0 && <div className="w-4" />}
               <div
                 className={`flex-1 px-3 py-2 rounded-lg text-sm ${
-                  index === 0 || index === chain.length - 1
+                  index === 0 || index === displayChain.length - 1
                     ? "bg-accent/15 text-accent font-semibold"
                     : "bg-card-border/30 text-foreground"
                 }`}

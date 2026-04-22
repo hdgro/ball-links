@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { Player } from "@/lib/types";
+import { gradientWash } from "@/lib/team-colors";
 
 interface PlayerCardProps {
   player: Player;
@@ -18,16 +19,20 @@ export default function PlayerCard({
 }: PlayerCardProps) {
   const [imgError, setImgError] = useState(false);
 
-  const headshotUrl = `https://www.basketball-reference.com/req/202106291/images/players/${player.id}.jpg`;
+  // Use /images/headshots/ — it serves both legacy players and recent rookies.
+  // /images/players/ (the old path) 404s for anyone drafted in the last season or two.
+  const headshotUrl = `https://www.basketball-reference.com/req/202106291/images/headshots/${player.id}.jpg`;
+  const wash = gradientWash(player.bgColor);
 
   if (collapsed && !showExpanded) {
     return (
       <button
         onClick={onToggle}
-        className="w-full px-4 py-2 bg-card-bg/60 border border-card-border/50 rounded-lg text-sm text-foreground/80 hover:bg-card-bg hover:border-card-border transition-all flex items-center justify-between"
+        className="w-full px-4 py-2 border border-card-border/40 rounded-lg text-sm text-white hover:brightness-110 transition-all flex items-center justify-between"
+        style={{ backgroundImage: wash }}
       >
-        <span className="font-medium">{player.name}</span>
-        <span className="text-muted text-xs">
+        <span className="font-medium drop-shadow-sm">{player.name}</span>
+        <span className="text-white/80 text-xs">
           ({player.startYear} &ndash; {player.endYear})
         </span>
       </button>
@@ -35,7 +40,10 @@ export default function PlayerCard({
   }
 
   return (
-    <div className="bg-card-bg border border-card-border rounded-xl p-4 w-full max-w-xs mx-auto">
+    <div
+      className="border border-card-border rounded-xl p-4 w-full max-w-xs mx-auto"
+      style={{ backgroundImage: wash }}
+    >
       <div className="aspect-[3/4] relative rounded-lg overflow-hidden bg-background mb-3">
         {!imgError ? (
           <img
@@ -55,15 +63,17 @@ export default function PlayerCard({
         )}
       </div>
       <div className="text-center">
-        <h3 className="font-bold text-lg text-foreground">{player.name}</h3>
-        <p className="text-sm text-muted">
+        <h3 className="font-bold text-lg text-white drop-shadow">
+          {player.name}
+        </h3>
+        <p className="text-sm text-white/80">
           {player.startYear} &ndash; {player.endYear}
         </p>
       </div>
       {collapsed && onToggle && (
         <button
           onClick={onToggle}
-          className="mt-2 w-full text-xs text-muted hover:text-foreground transition-colors"
+          className="mt-2 w-full text-xs text-white/70 hover:text-white transition-colors"
         >
           Collapse
         </button>
