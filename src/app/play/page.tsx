@@ -26,6 +26,7 @@ function GameContent() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isNearFinish, setIsNearFinish] = useState(false);
 
   const loadPlayers = useCallback(async () => {
     if (!startId || !finishId) {
@@ -59,6 +60,34 @@ function GameContent() {
   useEffect(() => {
     loadPlayers();
   }, [loadPlayers]);
+
+  // Check if current player is one step away from the finish player
+  useEffect(() => {
+    if (!currentPlayer || !finishId || isComplete) {
+      setIsNearFinish(false);
+      return;
+    }
+    if (currentPlayer.id === finishId) {
+      setIsNearFinish(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/players/${currentPlayer.id}/teammates?with=${finishId}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setIsNearFinish(Boolean(data.isTeammate));
+      } catch {
+        if (!cancelled) setIsNearFinish(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPlayer, finishId, isComplete]);
 
   const handleGuess = async (result: SearchResult) => {
     if (!currentPlayer || isChecking) return;
@@ -161,23 +190,40 @@ function GameContent() {
     <div className="min-h-screen bg-background">
       {/* Finish player banner */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-card-border">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
+        <div className="max-w-lg mx-auto px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between">
             <div className="text-xs uppercase tracking-wider text-muted font-semibold">
               Connect to
             </div>
-            <div className="font-bold text-accent">
-              {finishPlayer.name}{" "}
-              <span className="text-muted font-normal text-sm">
-                ({finishPlayer.startYear}&ndash;{finishPlayer.endYear})
-              </span>
-            </div>
+            <button
+              onClick={() => router.push("/")}
+              className="text-muted hover:text-foreground transition-colors text-sm"
+            >
+              Quit
+            </button>
           </div>
           <button
-            onClick={() => router.push("/")}
-            className="text-muted hover:text-foreground transition-colors text-sm"
+            onClick={() => {
+              if (!isNearFinish || isChecking) return;
+              handleGuess({
+                id: finishPlayer.id,
+                name: finishPlayer.name,
+                startYear: finishPlayer.startYear,
+                endYear: finishPlayer.endYear,
+                score: 0,
+              });
+            }}
+            disabled={!isNearFinish || isChecking}
+            className={`w-full px-4 py-2 rounded-lg text-sm transition-all flex items-center justify-between border ${
+              isNearFinish
+                ? "bg-accent/20 border-accent text-foreground hover:bg-accent/30 cursor-pointer animate-pulse"
+                : "bg-card-bg/60 border-card-border/50 text-foreground/80 cursor-default"
+            }`}
           >
-            Quit
+            <span className="font-medium">{finishPlayer.name}</span>
+            <span className="text-muted text-xs">
+              ({finishPlayer.startYear} &ndash; {finishPlayer.endYear})
+            </span>
           </button>
         </div>
       </div>
