@@ -7,6 +7,7 @@ import PlayerSearch from "@/components/PlayerSearch";
 import GuessCounter from "@/components/GuessCounter";
 import CompletionScreen from "@/components/CompletionScreen";
 import type { Player, SearchResult } from "@/lib/types";
+import { getTeamColor, gradientWash } from "@/lib/team-colors";
 
 function GameContent() {
   const searchParams = useSearchParams();
@@ -26,6 +27,12 @@ function GameContent() {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isChecking, setIsChecking] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [isNearFinish, setIsNearFinish] = useState(false);
+  // Gradient derived from the team currentPlayer and finishPlayer share.
+  // Null when not near finish, or when we haven't resolved the shared team yet.
+  const [nearFinishGradient, setNearFinishGradient] = useState<string | null>(
+    null
+  );
 
   const loadPlayers = useCallback(async () => {
     if (!startId || !finishId) {
@@ -60,11 +67,68 @@ function GameContent() {
     loadPlayers();
   }, [loadPlayers]);
 
+  // Check if current player is one step away from the finish player.
+  // When they are, also resolve which team they share so we can wash the
+  // end-player card in that team's gradient.
+  useEffect(() => {
+    if (!currentPlayer || !finishId || isComplete) {
+      setIsNearFinish(false);
+      setNearFinishGradient(null);
+      return;
+    }
+    if (currentPlayer.id === finishId) {
+      setIsNearFinish(false);
+      setNearFinishGradient(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(
+          `/api/players/${currentPlayer.id}/teammates?with=${finishId}`
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (cancelled) return;
+
+        if (
+          data.isTeammate &&
+          Array.isArray(data.sharedTeams) &&
+          data.sharedTeams.length > 0
+        ) {
+          // If they shared multiple teams, use the most recent one.
+          const latest = data.sharedTeams.reduce(
+            (a: { team: string; season: number }, b: { team: string; season: number }) =>
+              a.season >= b.season ? a : b
+          );
+          setIsNearFinish(true);
+          setNearFinishGradient(gradientWash(getTeamColor(latest.team)));
+        } else {
+          setIsNearFinish(false);
+          setNearFinishGradient(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsNearFinish(false);
+          setNearFinishGradient(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentPlayer, finishId, isComplete]);
+
   const handleGuess = async (result: SearchResult) => {
     if (!currentPlayer || isChecking) return;
 
+    const isFinishGuess = result.id === finishId;
+
     setIsChecking(true);
-    setGuessCount((prev) => prev + 1);
+    // The end player doesn't count as a guess — only count intermediate attempts
+    if (!isFinishGuess) {
+      setGuessCount((prev) => prev + 1);
+    }
 
     try {
       const res = await fetch(
@@ -79,6 +143,13 @@ function GameContent() {
         return;
       }
 
+      // Finish player closes the chain without being added as a link
+      if (isFinishGuess) {
+        setIsComplete(true);
+        setIsChecking(false);
+        return;
+      }
+
       const guessedPlayer: Player = {
         id: result.id,
         name: result.name,
@@ -86,25 +157,21 @@ function GameContent() {
         endYear: result.endYear,
       };
 
-      // Try to get nbaComId for headshot
+      // Try to pull extra display metadata (headshot id, card bg color)
       try {
         const playerRes = await fetch(`/api/players/${result.id}`);
         if (playerRes.ok) {
           const playerData = await playerRes.json();
           guessedPlayer.nbaComId = playerData.nbaComId;
+          guessedPlayer.bgColor = playerData.bgColor;
         }
       } catch {
-        // Use without headshot
+        // Use without extra metadata
       }
 
       setCorrectGuesses((prev) => prev + 1);
       setChain((prev) => [...prev, guessedPlayer]);
       setCurrentPlayer(guessedPlayer);
-
-      // Check if we've reached the finish player
-      if (result.id === finishId) {
-        setIsComplete(true);
-      }
     } catch {
       setErrorFlash(true);
       setTimeout(() => setErrorFlash(false), 1500);
@@ -161,23 +228,53 @@ function GameContent() {
     <div className="min-h-screen bg-background">
       {/* Finish player banner */}
       <div className="sticky top-0 z-40 bg-background/95 backdrop-blur border-b border-card-border">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div>
+        <div className="max-w-lg mx-auto px-4 py-3 space-y-2">
+          <div className="flex items-center justify-between">
             <div className="text-xs uppercase tracking-wider text-muted font-semibold">
               Connect to
             </div>
-            <div className="font-bold text-accent">
-              {finishPlayer.name}{" "}
-              <span className="text-muted font-normal text-sm">
-                ({finishPlayer.startYear}&ndash;{finishPlayer.endYear})
-              </span>
-            </div>
+            <button
+              onClick={() => router.push("/")}
+              className="text-muted hover:text-foreground transition-colors text-sm"
+            >
+              Quit
+            </button>
           </div>
           <button
-            onClick={() => router.push("/")}
-            className="text-muted hover:text-foreground transition-colors text-sm"
+            onClick={() => {
+              if (!isNearFinish || isChecking) return;
+              handleGuess({
+                id: finishPlayer.id,
+                name: finishPlayer.name,
+                startYear: finishPlayer.startYear,
+                endYear: finishPlayer.endYear,
+                score: 0,
+              });
+            }}
+            disabled={!isNearFinish || isChecking}
+            className={`w-full px-4 py-2 rounded-lg text-sm transition-all flex items-center justify-between border ${
+              isNearFinish
+                ? "border-card-border/40 text-white cursor-pointer hover:brightness-110 animate-pulse"
+                : "bg-card-bg/60 border-card-border/50 text-foreground/80 cursor-default"
+            }`}
+            style={
+              isNearFinish && nearFinishGradient
+                ? { backgroundImage: nearFinishGradient }
+                : undefined
+            }
           >
-            Quit
+            <span
+              className={`font-medium ${isNearFinish ? "drop-shadow-sm" : ""}`}
+            >
+              {finishPlayer.name}
+            </span>
+            <span
+              className={
+                isNearFinish ? "text-white/80 text-xs" : "text-muted text-xs"
+              }
+            >
+              ({finishPlayer.startYear} &ndash; {finishPlayer.endYear})
+            </span>
           </button>
         </div>
       </div>

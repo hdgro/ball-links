@@ -12,6 +12,8 @@ interface PlayerData {
       allStar?: boolean;
       firstRound?: boolean;
       careerGames?: number;
+      hof?: boolean;
+      bgColor?: string;
     }
   >;
   rosters: Record<string, string[]>;
@@ -39,6 +41,8 @@ function getPlayerList(data: PlayerData): Player[] {
     allStar: p.allStar,
     firstRound: p.firstRound,
     careerGames: p.careerGames,
+    hof: p.hof,
+    bgColor: p.bgColor,
   }));
 }
 
@@ -86,6 +90,8 @@ export async function getPlayer(id: string): Promise<Player | null> {
     startYear: p.startYear,
     endYear: p.endYear,
     nbaComId: p.nbaComId,
+    hof: p.hof,
+    bgColor: p.bgColor,
   };
 }
 
@@ -182,5 +188,5 @@ export async function getAllPlayers(): Promise<Player[]> {
 }
 
 export function getHeadshotUrl(player: Player): string {
-  return `https://www.basketball-reference.com/req/202106291/images/players/${player.id}.jpg`;
+  return `https://www.basketball-reference.com/req/202106291/images/headshots/${player.id}.jpg`;
 }

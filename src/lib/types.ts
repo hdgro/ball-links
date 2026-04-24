@@ -7,6 +7,8 @@ export interface Player {
   allStar?: boolean;
   firstRound?: boolean;
   careerGames?: number;
+  hof?: boolean;
+  bgColor?: string;
 }
 
 export interface PlayerStint {
