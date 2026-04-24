@@ -6,6 +6,7 @@ import type { Player } from "@/lib/types";
 interface CompletionScreenProps {
   chain: Player[];
   guessCount: number;
+  hints: number;
   onHome: () => void;
   onRestart: () => void;
   startPlayer: Player;
@@ -15,6 +16,7 @@ interface CompletionScreenProps {
 export default function CompletionScreen({
   chain,
   guessCount,
+  hints,
   onHome,
   onRestart,
   startPlayer,
@@ -29,7 +31,6 @@ export default function CompletionScreen({
     chain.length > 0 && chain[chain.length - 1].id === finishPlayer.id
       ? chain
       : [...chain, finishPlayer];
-  const pathLength = displayChain.length;
   const linkCount = Math.max(0, chain.length - 1);
 
   const copyChallenge = async () => {
@@ -41,7 +42,7 @@ export default function CompletionScreen({
 
   const copyResults = async () => {
     const chainIds = displayChain.map((p) => p.id).join(",");
-    const url = `${window.location.origin}/results?start=${startPlayer.id}&finish=${finishPlayer.id}&chain=${chainIds}&guesses=${guessCount}`;
+    const url = `${window.location.origin}/results?start=${startPlayer.id}&finish=${finishPlayer.id}&chain=${chainIds}&guesses=${guessCount}&hints=${hints}`;
     await navigator.clipboard.writeText(url);
     setCopiedResults(true);
     setTimeout(() => setCopiedResults(false), 2000);
@@ -59,16 +60,7 @@ export default function CompletionScreen({
 
         <div className="bg-card-bg border border-card-border rounded-xl p-6 space-y-4">
           <div className="flex justify-between text-center">
-            <div>
-              <div className="text-2xl font-bold text-foreground">
-                {pathLength}
-              </div>
-              <div className="text-xs text-muted uppercase tracking-wider">
-                Players
-              </div>
-            </div>
-            <div className="w-px bg-card-border" />
-            <div>
+            <div className="flex-1">
               <div className="text-2xl font-bold text-foreground">
                 {linkCount}
               </div>
@@ -77,12 +69,21 @@ export default function CompletionScreen({
               </div>
             </div>
             <div className="w-px bg-card-border" />
-            <div>
+            <div className="flex-1">
               <div className="text-2xl font-bold text-foreground">
                 {guessCount}
               </div>
               <div className="text-xs text-muted uppercase tracking-wider">
                 Guesses
+              </div>
+            </div>
+            <div className="w-px bg-card-border" />
+            <div className="flex-1">
+              <div className="text-2xl font-bold text-foreground">
+                {hints}
+              </div>
+              <div className="text-xs text-muted uppercase tracking-wider">
+                Hints
               </div>
             </div>
           </div>
@@ -94,7 +95,7 @@ export default function CompletionScreen({
           </h3>
           {displayChain.map((player, index) => (
             <div key={player.id + index} className="flex items-center gap-2">
-              {index > 0 && (
+              {index < displayChain.length - 1 ? (
                 <div className="w-4 flex justify-center">
                   <svg
                     className="w-3 h-3 text-accent"
@@ -110,8 +111,9 @@ export default function CompletionScreen({
                     />
                   </svg>
                 </div>
+              ) : (
+                <div className="w-4" />
               )}
-              {index === 0 && <div className="w-4" />}
               <div
                 className={`flex-1 px-3 py-2 rounded-lg text-sm ${
                   index === 0 || index === displayChain.length - 1

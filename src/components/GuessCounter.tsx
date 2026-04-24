@@ -3,9 +3,10 @@
 interface GuessCounterProps {
   total: number;
   correct: number;
+  hints: number;
 }
 
-export default function GuessCounter({ total, correct }: GuessCounterProps) {
+export default function GuessCounter({ total, correct, hints }: GuessCounterProps) {
   const incorrect = total - correct;
 
   return (
@@ -25,6 +26,11 @@ export default function GuessCounter({ total, correct }: GuessCounterProps) {
         <div className="flex justify-between items-center">
           <span className="text-sm text-error/80">Incorrect</span>
           <span className="font-bold text-lg text-error">{incorrect}</span>
+        </div>
+        <div className="h-px bg-card-border my-1" />
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-foreground/80">Hints</span>
+          <span className="font-bold text-lg text-foreground">{hints}</span>
         </div>
       </div>
     </div>

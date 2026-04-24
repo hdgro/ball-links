@@ -84,6 +84,12 @@ export async function getPlayer(id: string): Promise<Player | null> {
   const p = data.players[id];
   if (!p) return null;
 
+  const stintStrings = data.playerStints[id] ?? [];
+  const stints = stintStrings.map((s) => {
+    const [teamId, seasonStr] = s.split("-");
+    return { teamId, season: parseInt(seasonStr, 10) };
+  });
+
   return {
     id,
     name: p.name,
@@ -92,6 +98,7 @@ export async function getPlayer(id: string): Promise<Player | null> {
     nbaComId: p.nbaComId,
     hof: p.hof,
     bgColor: p.bgColor,
+    stints,
   };
 }
 

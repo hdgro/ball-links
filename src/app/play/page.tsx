@@ -28,6 +28,21 @@ function GameContent() {
   const [isChecking, setIsChecking] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [isNearFinish, setIsNearFinish] = useState(false);
+  // Unique set of player IDs whose info card the user has flipped. Set dedup
+  // means flipping the same player twice still counts as one hint.
+  const [hintedPlayerIds, setHintedPlayerIds] = useState<Set<string>>(
+    new Set()
+  );
+  const hintCount = hintedPlayerIds.size;
+
+  const registerHint = useCallback((playerId: string) => {
+    setHintedPlayerIds((prev) => {
+      if (prev.has(playerId)) return prev;
+      const next = new Set(prev);
+      next.add(playerId);
+      return next;
+    });
+  }, []);
   // Gradient derived from the team currentPlayer and finishPlayer share.
   // Null when not near finish, or when we haven't resolved the shared team yet.
   const [nearFinishGradient, setNearFinishGradient] = useState<string | null>(
@@ -157,13 +172,14 @@ function GameContent() {
         endYear: result.endYear,
       };
 
-      // Try to pull extra display metadata (headshot id, card bg color)
+      // Try to pull extra display metadata (headshot id, card bg color, career stints)
       try {
         const playerRes = await fetch(`/api/players/${result.id}`);
         if (playerRes.ok) {
           const playerData = await playerRes.json();
           guessedPlayer.nbaComId = playerData.nbaComId;
           guessedPlayer.bgColor = playerData.bgColor;
+          guessedPlayer.stints = playerData.stints;
         }
       } catch {
         // Use without extra metadata
@@ -209,6 +225,7 @@ function GameContent() {
       <CompletionScreen
         chain={chain}
         guessCount={guessCount}
+        hints={hintCount}
         startPlayer={startPlayer}
         finishPlayer={finishPlayer}
         onHome={() => router.push("/")}
@@ -219,6 +236,7 @@ function GameContent() {
           setCorrectGuesses(0);
           setIsComplete(false);
           setExpandedIndex(null);
+          setHintedPlayerIds(new Set());
         }}
       />
     );
@@ -305,7 +323,7 @@ function GameContent() {
             </div>
 
             {/* Active player card */}
-            <PlayerCard player={currentPlayer} />
+            <PlayerCard player={currentPlayer} onFlip={registerHint} />
 
             {/* Chain history (collapsed cards) */}
             {chain.length > 1 && (
@@ -322,6 +340,7 @@ function GameContent() {
                         player={player}
                         collapsed={true}
                         showExpanded={isExpanded}
+                        onFlip={registerHint}
                         onToggle={() =>
                           setExpandedIndex(
                             isExpanded ? null : originalIndex
@@ -337,17 +356,28 @@ function GameContent() {
           {/* Guess counter sidebar (desktop) */}
           <div className="hidden sm:block w-32 shrink-0">
             <div className="sticky top-20">
-              <GuessCounter total={guessCount} correct={correctGuesses} />
+              <GuessCounter
+                total={guessCount}
+                correct={correctGuesses}
+                hints={hintCount}
+              />
             </div>
           </div>
         </div>
 
-        {/* Mobile guess counter */}
+        {/* Mobile guess + hint counter */}
         <div className="sm:hidden fixed bottom-4 right-4 z-30">
           <div className="bg-card-bg border border-card-border rounded-xl px-4 py-2 shadow-lg">
-            <div className="flex items-center gap-3 text-sm">
-              <span className="text-muted">Guesses:</span>
-              <span className="font-bold text-foreground">{guessCount}</span>
+            <div className="flex items-center gap-4 text-sm">
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted">Guesses:</span>
+                <span className="font-bold text-foreground">{guessCount}</span>
+              </div>
+              <div className="w-px h-4 bg-card-border" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-muted">Hints:</span>
+                <span className="font-bold text-foreground">{hintCount}</span>
+              </div>
             </div>
           </div>
         </div>

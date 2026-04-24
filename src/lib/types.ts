@@ -1,3 +1,8 @@
+export interface PlayerStint {
+  teamId: string;
+  season: number;
+}
+
 export interface Player {
   id: string;
   name: string;
@@ -9,11 +14,7 @@ export interface Player {
   careerGames?: number;
   hof?: boolean;
   bgColor?: string;
-}
-
-export interface PlayerStint {
-  teamId: string;
-  season: number;
+  stints?: PlayerStint[];
 }
 
 export interface PlayerDetail extends Player {
